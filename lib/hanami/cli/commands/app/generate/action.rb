@@ -5,6 +5,7 @@ require "dry/files"
 require "shellwords"
 require_relative "../../../naming"
 require_relative "../../../errors"
+require_relative "slice_detection"
 
 module Hanami
   module CLI
@@ -14,6 +15,7 @@ module Hanami
           # @since 2.0.0
           # @api private
           class Action < App::Command
+            include SliceDetection
             # TODO: ideally the default format should lookup
             #       slice configuration (Action's `default_response_format`)
             DEFAULT_FORMAT = "html"
@@ -98,7 +100,15 @@ module Hanami
               context: nil,
               **
             )
+              # Detect if we're in a slice directory or the app directory
+              detected_slice = detect_slice_from_current_directory
+              
+              # Use detected slice if no slice was explicitly specified
+              slice ||= detected_slice
+              
+              # Normalize the slice name if provided
               slice = inflector.underscore(Shellwords.shellescape(slice)) if slice
+              
               name = naming.action_name(name)
               *controller, action = name.split(ACTION_SEPARATOR)
 
@@ -108,7 +118,7 @@ module Hanami
 
               generator.call(app.namespace, controller, action, url, http, format, skip_view, skip_route, slice, context: context)
             end
-
+            
             # rubocop:enable Metrics/ParameterLists
 
             private

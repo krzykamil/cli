@@ -5,6 +5,7 @@ require "dry/files"
 require "shellwords"
 require_relative "../../../naming"
 require_relative "../../../errors"
+require_relative "slice_detection"
 
 module Hanami
   module CLI
@@ -14,6 +15,7 @@ module Hanami
           # @since 2.2.0
           # @api private
           class Command < App::Command
+            include SliceDetection
             option :slice, required: false, desc: "Slice name"
 
             attr_reader :generator
@@ -38,6 +40,11 @@ module Hanami
             # @since 2.2.0
             # @api private
             def call(name:, slice: nil, **)
+              # Detect if we're in a slice directory
+              detected_slice = detect_slice_from_current_directory
+              
+              # Use detected slice if no slice was explicitly specified
+              slice ||= detected_slice
               if slice
                 base_path = fs.join("slices", inflector.underscore(slice))
                 raise MissingSliceError.new(slice) unless fs.exist?(base_path)

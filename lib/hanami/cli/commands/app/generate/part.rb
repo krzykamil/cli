@@ -3,6 +3,7 @@
 require "dry/inflector"
 require "dry/files"
 require "shellwords"
+require_relative "slice_detection"
 
 module Hanami
   module CLI
@@ -12,6 +13,7 @@ module Hanami
           # @since 2.1.0
           # @api private
           class Part < App::Command
+            include SliceDetection
             DEFAULT_SKIP_TESTS = false
             private_constant :DEFAULT_SKIP_TESTS
 
@@ -45,6 +47,13 @@ module Hanami
             # @since 2.0.0
             # @api private
             def call(name:, slice: nil, skip_tests: DEFAULT_SKIP_TESTS, **) # rubocop:disable Lint/UnusedMethodArgument
+              # Detect if we're in a slice directory
+              detected_slice = detect_slice_from_current_directory
+              
+              # Use detected slice if no slice was explicitly specified
+              slice ||= detected_slice
+              
+              # Normalize the slice name if provided
               slice = inflector.underscore(Shellwords.shellescape(slice)) if slice
 
               generator.call(app.namespace, name, slice)
